@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Medical Symptom Checker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4a6fa5;
+            --secondary: #166088;
+            --light: #f8f9fa;
+            --dark: #343a40;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-weight: 500;
+            font-size: 1.8rem;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-weight: 300;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        
+        .chat-container {
+            height: 400px;
+            padding: 1rem;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+        }
+        
+        .message {
+            margin-bottom: 1rem;
+            max-width: 80%;
+            padding: 0.8rem 1rem;
+            border-radius: 18px;
+            line-height: 1.4;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .user-message {
+            background-color: var(--primary);
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .bot-message {
+            background-color: #e9ecef;
+            color: var(--dark);
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+        }
+        
+        .diagnosis {
+            background-color: #e2f3ff;
+            border-left: 4px solid var(--secondary);
+        }
+        
+        .confidence {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.3rem;
+            display: block;
+        }
+        
+        .input-area {
+            display: flex;
+            padding: 1rem;
+            background-color: white;
+            border-top: 1px solid #eee;
+        }
+        
+        #message {
+            flex: 1;
+            padding: 0.8rem 1rem;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+            transition: border 0.3s;
+        }
+        
+        #message:focus {
+            border-color: var(--primary);
+        }
+        
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 0 1.5rem;
+            margin-left: 0.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background-color: var(--secondary);
+        }
+        
+        .disclaimer {
+            font-size: 0.8rem;
+            color: #666;
+            text-align: center;
+            margin-top: 1rem;
+            padding: 0 1rem;
+        }
+        
+        .typing-indicator {
+            display: flex;
+            padding: 0.8rem 1rem;
+            background-color: #e9ecef;
+            border-radius: 18px;
+            margin-bottom: 1rem;
+            width: fit-content;
+            border-bottom-left-radius: 4px;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #666;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: typingAnimation 1.4s infinite;
+        }
+        
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typingAnimation {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                margin: 0;
+                padding: 0;
+            }
+            
+            .card {
+                border-radius: 0;
+                min-height: 100vh;
+            }
+            
+            .chat-container {
+                height: calc(100vh - 180px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <h1>AI Medical Symptom Checker</h1>
+                <p>Describe your symptoms for a preliminary assessment</p>
+            </div>
+            
+            <div class="chat-container" id="chatbox">
+                <!-- Messages will appear here -->
+            </div>
+            
+            <div class="input-area">
+                <input type="text" id="message" placeholder="Type your symptoms..." autocomplete="off">
+                <button class="btn" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+        
+        <p class="disclaimer">
+            Note: This AI tool provides preliminary information only and is not a substitute for professional medical advice.
+        </p>
+    </div>
+
+    <script>
+        const chatbox = document.getElementById('chatbox');
+        const messageInput = document.getElementById('message');
+        
+        // Initial bot message
+        addMessage('bot', "Hello! I'm your AI symptom checker. Please describe your symptoms (e.g., 'I have a headache and fever').", false);
+        
+        function addMessage(sender, text, isTyping = true) {
+            if (isTyping) {
+                // Show typing indicator
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'typing-indicator';
+                typingDiv.id = 'typing';
+                typingDiv.innerHTML = `
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                `;
+                chatbox.appendChild(typingDiv);
+                chatbox.scrollTop = chatbox.scrollHeight;
+                
+                // Remove typing indicator after delay
+                setTimeout(() => {
+                    if (document.getElementById('typing')) {
+                        chatbox.removeChild(document.getElementById('typing'));
+                        createMessage(sender, text);
+                    }
+                }, 1000);
+            } else {
+                createMessage(sender, text);
+            }
+        }
+        
+        function createMessage(sender, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            
+            // Check if it's a diagnosis message
+            if (text.includes("Final diagnosis")) {
+                messageDiv.classList.add('diagnosis');
+            }
+            
+            messageDiv.textContent = text;
+            chatbox.appendChild(messageDiv);
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+        
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+            
+            addMessage('user', message);
+            messageInput.value = '';
+            
+            // Show typing indicator immediately
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing-indicator';
+            typingDiv.id = 'typing';
+            typingDiv.innerHTML = `
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            `;
+            chatbox.appendChild(typingDiv);
+            chatbox.scrollTop = chatbox.scrollHeight;
+            
+            fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            })
+            .then(res => res.json())
+            .then(data => {
+                // Remove typing indicator
+                if (document.getElementById('typing')) {
+                    chatbox.removeChild(document.getElementById('typing'));
+                }
+                addMessage('bot', data.response, false);
+            });
+        }
+        
+        // Allow sending with Enter key
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>
